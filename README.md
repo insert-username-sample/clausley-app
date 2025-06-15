@@ -1,40 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Clausely Application
 
-## Getting Started
+This README summarizes the changes and actions performed during the development session.
 
-First, run the development server:
+## Session Summary
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Initial Setup & Debugging
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Problem:** The application was not working correctly on the root path, and the login/signup card was not appearing as expected.
+- **Investigation:**
+    - Checked `middleware.ts` to review Clerk authentication middleware configuration.
+    - Checked `app/layout.tsx` to ensure `ClerkProvider` was correctly implemented.
+    - Identified that `@clerk/nextjs` was missing from `package.json`.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+### Key Changes & Fixes
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+1.  **`middleware.ts` Modification:**
+    - Updated the `middleware.ts` file to protect the root path (`/`). This ensures that unauthenticated users are redirected to the login page.
+    ```typescript:clausley-app/middleware.ts
+    import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+    const isProtectedRoute = createRouteMatcher([
+      '/dashboard(.*)',
+      '/projects(.*)',
+      '/settings(.*)',
+      '/', // Added root path to protected routes
+    ]);
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    export default clerkMiddleware((auth, req) => {
+      if (isProtectedRoute(req)) auth().protect();
+    });
 
-## Learn More
+    export const config = {
+      matcher: [
+        '/((?!.*\\..*|_next).*)',
+        '/',
+        '/(api|trpc)(.*)',
+      ],
+    };
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+2.  **`package.json` Update:**
+    - Added `@clerk/nextjs` as a dependency to `package.json` to enable Clerk authentication functionalities.
+    ```json:clausley-app/package.json
+    // ... existing code ...
+    "dependencies": {
+      // ... existing dependencies ...
+      "@clerk/nextjs": "^5.0.12",
+      "sonner": "^1.7.0",
+      "tailwindcss-animate": "^1.0.7"
+    },
+    // ... existing code ...
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+3.  **Development Server Management:**
+    - Stopped the running development server to apply `middleware.ts` changes.
+    - Restarted the development server on `http://localhost:3000` from the correct `clausley-app` directory after resolving a "Missing script: dev" error caused by running `npm run dev` from the wrong directory.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Current Status
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+The development server is now running correctly on `http://localhost:3000`, and the root path is protected by Clerk authentication. Unauthenticated users should be redirected to the login page, where the `LoginPage` component dynamically renders `SignIn` or `SignUp` forms.
